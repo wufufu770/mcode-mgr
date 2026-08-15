@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "name": "mcode-mgr",
+  "displayName": "MCode Manager",
+  "version": "0.1.1",
+  "description": "会话管理工具集：列出/查看/重命名/归档/删除/导出/导入/fork sessions，以及持久记忆开关与按会话纳入记忆。",
+  "author": "wff",
+  "icon": "icon.png",
+  "category": "Other",
+  "exampleQueries": [
+    "列出我所有的会话",
+    "把会话 xxx 重命名为 新的名字",
+    "导出会话 xxx",
+    "关闭持久记忆"
+  ],
+  "apps": [],
+  "mcpServers": [
+    "mcp.json"
+  ],
+  "skills": [
+    "skills/mcode-mgr/SKILL.md"
+  ]
+}

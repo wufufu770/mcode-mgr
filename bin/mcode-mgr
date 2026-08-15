@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""MCode Manager CLI - 独立命令行入口。
+
+与 MCP 服务器共享同一份核心实现，通过命令行参数直接调用，
+不依赖 mcode 插件系统。安装方式与 mcode-theme 一致：
+复制到 ~/.local/bin/mcode-mgr 即可独立使用。
+
+用法:
+  mcode-mgr session list [--agent X] [--workspace Y] [--show-archived]
+  mcode-mgr session get <session_id>
+  mcode-mgr session rename <session_id> <新标题>
+  mcode-mgr session archive <session_id> [--no]
+  mcode-mgr session delete <session_id>
+  mcode-mgr session export <session_id> [--format text|jsonl] [--output 文件]
+  mcode-mgr session import <jsonl路径> [--title 标题] [--workspace 目录]
+  mcode-mgr session fork <session_id>
+  mcode-mgr memory status
+  mcode-mgr memory set true|false
+  mcode-mgr memory default true|false
+  mcode-mgr memory enroll <session_id> [--scope user|agent] [--note 备注]
+"""
+
+import os
+import sys
+
+# 定位核心实现（与 bin 同目录的 scripts/mcp_server.py）
+_BIN_DIR = os.path.dirname(os.path.abspath(__file__))
+_CORE = os.path.join(_BIN_DIR, "scripts", "mcp_server.py")
+if not os.path.isfile(_CORE):
+    _CORE = os.path.join(os.path.dirname(_BIN_DIR), "scripts", "mcp_server.py")
+if not os.path.isfile(_CORE):
+    # 兼容单文件部署：核心与 bin 同目录
+    _CORE = os.path.join(_BIN_DIR, "mcp_server.py")
+
+if os.path.isfile(_CORE):
+    # 用 exec 加载核心模块（避免包结构要求）
+    _ns = {}
+    with open(_CORE, "r", encoding="utf-8") as _f:
+        exec(compile(_f.read(), _CORE, "exec"), _ns)
+    _cli_main = _ns.get("cli_main")
+    if _cli_main is None:
+        print("错误: 核心文件缺少 cli_main 入口", file=sys.stderr)
+        sys.exit(1)
+    sys.exit(_cli_main(sys.argv[1:]))
+else:
+    print("错误: 找不到核心实现 scripts/mcp_server.py", file=sys.stderr)
+    sys.exit(1)
