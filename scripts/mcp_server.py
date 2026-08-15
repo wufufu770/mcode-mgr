@@ -931,7 +931,7 @@ def handle_request(req):
 
 
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] in ("session", "memory", "help", "list"):
+    if len(sys.argv) > 1 and sys.argv[1] in ("session", "sessions", "memory", "help", "list"):
         sys.exit(cli_main(sys.argv[1:]))
     for line in sys.stdin:
         line = line.strip()
@@ -958,6 +958,7 @@ def cli_main(args):
         print("用法: python3 mcp_server.py <子命令>")
         print("")
         print("会话: session list|get|rename|archive|delete|export|import|fork")
+        print("  （sessions 是 session 的别名）")
         print("  session list [--agent X] [--workspace Y] [--show-archived]")
         print("  session get <session_id>")
         print("  session rename <session_id> <新标题>")
@@ -975,7 +976,7 @@ def cli_main(args):
         return 0
 
     sub = args[1] if len(args) > 1 else ""
-    if cmd == "session":
+    if cmd in ("session", "sessions"):
         return cli_session(sub, args[2:])
     if cmd == "memory":
         return cli_memory(sub, args[2:])
