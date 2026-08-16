@@ -3,7 +3,26 @@
 独立 CLI 工具，为 [MiniMax Code CLI](https://www.minimaxi.com)（mcode）提供会话管理与持久记忆控制。
 **不依赖 mcode 插件系统**，与 mcode-theme 相同的独立安装方式，mcode 升级不影响使用。
 
+## 快速场景
+
+先装后用（`bash install.sh`），下面是最常用的四个场景：
+
+| 场景 | 命令 |
+|---|---|
+| 关闭持久记忆 | `mcode-mgr memory set false` |
+| 找回删掉的会话 | `mcode-mgr session trash list` + `mcode-mgr session trash restore <id>` |
+| 把上个会话要点存入记忆 | `mcode-mgr memory enroll <sid>` |
+| 查看/修正 user.md 记忆 | `mcode-mgr memory show` + `mcode-mgr memory block list/remove` |
+
 ## 安装
+
+一键安装（bin + skill，`--prefix` 默认 `~/.local`，可重复执行，幂等）：
+
+```bash
+bash install.sh              # 或指定前缀: bash install.sh --prefix ~/tools
+```
+
+手动安装（等价于 install.sh 做的事）：
 
 ```bash
 cp bin/mcode-mgr ~/.local/bin/mcode-mgr
@@ -14,6 +33,7 @@ chmod +x ~/.local/bin/mcode-mgr
 ## 安装 Skill（让 mcode 对话中可用）
 
 mcode 的 skill 从 `~/.minimax/skills/<name>/SKILL.md` 加载（不是插件目录）。
+`bash install.sh` 已自动完成；手动安装：
 把 mcode-mgr 的 skill 放进去后，在 mcode 对话里直接说"列出会话 / 关闭持久记忆"
 等即可触发：
 
@@ -133,7 +153,12 @@ mcode-mgr memory default true    # 默认开启
 ```
 
 - 持久化到 `~/.minimax/mcode-mgr/memory-default.json`
-- 未在 config.yaml 显式配置时按此策略生效
+- **这是 mcode-mgr 工具侧默认策略**（记录工具自身的默认偏好，供
+  `memory status` 展示与后续写入参考）；实证表明 mcode 不会读取该文件
+  （见 docs/notes/memory-default.md），实际影响 mcode 的开关始终是
+  config.yaml 的 `memory.enabled`
+- `memory default` 同时会把该值同步写入 config.yaml（等同一次 `memory set`），
+  因此命令本身生效路径是 config.yaml
 - 适合"平时默认关，需要时手动开"的隐私偏好
 
 ### 按会话纳入记忆（`memory enroll`）
@@ -176,7 +201,7 @@ mcode-mgr memory enroll mvs_xxx --remove       # 仅移除该会话的记忆块
 | **User Profile** | `~/.minimax/memory/user.md` | 用户画像，**每次会话自动注入** |
 | **Agent Memory** | `~/.minimax/agents/mavis/memory/MEMORY.md` | mavis agent 的会话记忆 |
 | **开关配置** | `~/.minimax/config.yaml`（`memory.enabled` 字段） | 持久记忆总开关 |
-| **默认策略** | `~/.minimax/mcode-mgr/memory-default.json` | 未显式配置时的默认值 |
+| **默认策略** | `~/.minimax/mcode-mgr/memory-default.json` | mcode-mgr 工具侧默认策略记录（mcode 不读取，见 docs/notes/memory-default.md） |
 | **回收站** | `~/.minimax/mcode-mgr-trash/` | 删除的会话（可恢复） |
 
 #### `user.md`（用户画像）
@@ -237,22 +262,53 @@ memory:
 
 - 位置：`~/.minimax/mcode-mgr/memory-default.json`
 - 修改方式：`mcode-mgr memory default true|false`
-- 作用：config.yaml **未显式配置** `memory.enabled` 时按此值生效
+- 作用：**mcode-mgr 工具侧默认策略**记录（mcode 不读取此文件；`memory default`
+  命令同时写入 config.yaml 的 `memory.enabled` 才真正影响 mcode）
 
 ## 目录结构
 
 ```
 mcode-mgr/
+├── install.sh                  # 一键安装（bin + skill，--prefix 默认 ~/.local）
 ├── bin/
 │   └── mcode-mgr              # CLI 入口（薄封装，定位同目录 mcp_server.py）
 ├── scripts/
 │   └── mcp_server.py          # 核心实现（MCP stdio 服务器 + CLI 双入口）
 ├── skills/
 │   └── mcode-mgr/SKILL.md     # Agent 技能文档
-├── mcp.json                   # 可选：MCP 插件声明（若 mcode 插件系统可用）
-├── .minimax-plugin/           # 可选：插件元信息
-└── icon.png
+├── plugins/
+│   └── wufufu770/mcode-mgr/   # 官方注册表插件包（agent-plugins.org，MCP+Skill）
+├── docs/notes/                # 实证文档（memory-injection / memory-default / plugin-loading）
+└── mcp.json                   # 可选：MCP 插件声明（若 mcode 插件系统可用）
 ```
+
+## 官方插件注册表适配（v0.3）
+
+mcode-mgr 以 **agent-plugins.org 标准**打包为 MCP + Skill 双形态插件，目录
+`plugins/wufufu770/mcode-mgr/`（六件套）：
+
+| 文件 | 说明 |
+|---|---|
+| `plugin.json` | agent-plugins.org plugin.schema.json（name=mcode-mgr, version=0.2.0, author=wufufu770, license=MIT） |
+| `mcp.json` | agent-plugins.org mcp.schema.json；stdio: `python3 scripts/mcp_server.py`（cwd=./） |
+| `skills/mcode-mgr/SKILL.md` | 技能（触发词含"会话/持久记忆"） |
+| `scripts/mcp_server.py` | self-contained 副本（sha256 与主仓库一致） |
+| `README.md` + `LICENSE` | 使用说明（含版本对齐说明）+ MIT |
+
+本地安装即"放目录"（实测 `mcode plugin list -m local --available` 可见，
+mcpServerCount=1, skillCount=1）：
+
+```bash
+cp -r plugins/wufufu770/mcode-mgr ~/.minimax/plugins/mcode-mgr
+mcode plugin marketplace upgrade
+mcode plugin list -m local --available
+```
+
+- 注册表 PR：`hetaoBackend/MiniMax-Code-Plugins` → `plugins/wufufu770/mcode-mgr/`
+  （fork 分支 `add/mcode-mgr-plugin`；`npm run check` 全绿）
+- 插件加载机制、格式约束与实测结论见 docs/notes/plugin-loading.md
+- 插件内 `mcp_server.py` 为 self-contained 副本，**与主仓库 v0.2.0 对齐，
+  升级时同步**
 
 ## 兼容性
 
@@ -274,18 +330,35 @@ mcode-mgr memory block replace <sid|序号> <新内容> [--scope user|agent] [--
 
 - `memory show`：输出完整文件内容 + 元信息块（路径/大小/修改时间/块数）；文件不存在输出
   `（不存在: 路径）` 且 exit 0
-- `memory edit`：无 `$EDITOR` 时报错；内容未变不写入；块结构（`## ` 标题数）变化时
-  拒绝写入并保留原文件；所有写前自动备份到 `backups/`（`user.md.<epoch>` 轮转 5 份）
+- `memory edit`：无 `$EDITOR` 时报错；内容未变不写入；块结构（`## ` 标题数）变化或
+  编辑后为空时拒绝写入并保留原文件；缺 `> 来源` 引用行的块输出 WARN（含行号，不阻断）；
+  文件尾部自动补换行；所有写前自动备份到 `backups/`（`user.md.<epoch>` 轮转 5 份）
 - `memory append`：追加「手动追加」块（`## 手动追加: <时间>` + `> 来源: 手动` 引用行），
   无 sid 不参与 enroll 去重，受 512KB 上限约束
 - `memory block`：按 sid 或序号精准删除/替换块；replace 保留块标题与来源引用行；
   空内容等同删除；`--dry-run` 只预览不写盘
+
+### 健壮性（v0.3）
+
+- 写操作（rename/archive/delete/fork/import）执行前检测 mcode 是否运行
+  （`_mcode_running()`：pgrep -f 匹配 cli.js/进程名）：活跃时返回文本带
+  `⚠ 检测到 mcode 运行中` 前缀与 `⚠ mcode 正在运行，修改会话索引可能不同步（建议先退出 mcode）`
+  警告行，**不阻断**操作
+- sqlite 读取始终保持 readonly 打开；写操作全部走备份 + 轮转 5 份策略
 
 ### 结果反馈（v0.2）
 
 - 所有写操作输出统一以 `→ <绝对路径>` 收尾；错误统一 `✗ <原因>` 前缀
 - CLI 全局 `--json` 选项输出机器可读 JSON：`{"ok": true/false, "output": ..., "error": ...}`
 - exit 码：0 成功 / 1 业务错误 / 2 参数错误
+
+## 实证文档（docs/notes/）
+
+| 文档 | 结论 |
+|---|---|
+| memory-injection.md | mcode 对 user.md/MEMORY.md 注入为**整文件 verbatim**（<user_profile>/<agent_memory_tail>，超 10240 字符取尾部），不按 `## ` 切块 → enroll 块格式兼容，无需调整 |
+| memory-default.md | memory-default.json 在 cli.js 中 0 引用 → 纯工具侧默认策略（mcode 读取顺序：config.yaml `memory.enabled` → 内建默认 true） |
+| plugin-loading.md | 本地插件目录 `~/.minimax/plugins/<name>/`；agent-plugins.org 格式实测可被 `mcode plugin list -m local` 识别；CLI 0.1.2 下 mcp.json `cwd: $PLUGIN_ROOT` 解析失败需用 `./` |
 
 ## 测试
 
