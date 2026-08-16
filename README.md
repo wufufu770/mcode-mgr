@@ -103,12 +103,75 @@ mcode-mgr memory enroll mvs_xxx --scope user --note "项目背景"
 
 ### 记忆文件位置
 
+持久记忆相关文件全部存放在 mcode 的数据目录 `~/.minimax/` 下：
+
 | 文件 | 路径 | 作用 |
 |---|---|---|
-| User Profile | `~/.minimax/memory/user.md` | 跨会话注入的用户画像 |
-| Agent Memory | `~/.minimax/agents/mavis/memory/MEMORY.md` | mavis agent 的会话记忆 |
-| 开关配置 | `~/.minimax/config.yaml` (`memory.enabled`) | 持久记忆总开关 |
-| 默认策略 | `~/.minimax/mcode-mgr/memory-default.json` | 未显式配置时的默认值 |
+| **User Profile** | `~/.minimax/memory/user.md` | 用户画像，**每次会话自动注入** |
+| **Agent Memory** | `~/.minimax/agents/mavis/memory/MEMORY.md` | mavis agent 的会话记忆 |
+| **开关配置** | `~/.minimax/config.yaml`（`memory.enabled` 字段） | 持久记忆总开关 |
+| **默认策略** | `~/.minimax/mcode-mgr/memory-default.json` | 未显式配置时的默认值 |
+| **回收站** | `~/.minimax/mcode-mgr-trash/` | 删除的会话（可恢复） |
+
+#### `user.md`（用户画像）
+
+每次新会话启动时注入给 agent 的**用户信息档案**，markdown 格式：
+
+```markdown
+# User Profile · <用户名>
+
+> Last updated: 2026-08-14
+
+## 已知信息
+
+### 基础设施
+- 拥有一台 2 vCPU / 1.6GB RAM 的 Ubuntu 公网服务器(IP xxx,无域名,自签证书)
+...
+```
+
+- 位置：`~/.minimax/memory/user.md`
+- 注入时机：**每次会话开始时**读取并注入
+- 写入方式：`mcode-mgr memory enroll <session> --scope user`
+- 特点：跨会话、对所有 agent 生效、优先级最高
+
+#### `MEMORY.md`（Agent 记忆）
+
+只对指定 agent（如 mavis）会话生效的**会话记忆**：
+
+```markdown
+## 会话记忆: <会话标题>
+
+> 来源 session: `mvs_xxx`  纳入时间: 2026-08-15  备注: 项目背景
+
+### assistant
+
+<会话中的有效对话内容>
+```
+
+- 位置：`~/.minimax/agents/<agent>/memory/MEMORY.md`
+- 写入方式：`mcode-mgr memory enroll <session>`（默认 scope=agent）
+- 特点：按 agent 隔离，只在该 agent 会话中注入
+
+#### `config.yaml`（开关）
+
+```yaml
+memory:
+  enabled: true    # true=开启, false=关闭
+```
+
+- 位置：`~/.minimax/config.yaml`
+- 修改方式：`mcode-mgr memory set true|false`
+- 生效时机：**下次会话启动**（runtime 只在会话开始时读取一次）
+
+#### `memory-default.json`（默认策略）
+
+```json
+{"enabled": false}
+```
+
+- 位置：`~/.minimax/mcode-mgr/memory-default.json`
+- 修改方式：`mcode-mgr memory default true|false`
+- 作用：config.yaml **未显式配置** `memory.enabled` 时按此值生效
 
 ## 目录结构
 
