@@ -54,6 +54,62 @@ mcode-mgr memory enroll mvs_xxx --scope user # 写入 user.md（跨会话注入�
 mcode-mgr memory enroll mvs_xxx --note "项目背景"
 ```
 
+## 持久记忆功能详解
+
+mcode 的持久记忆（Persistent Memory）让 agent 能**跨会话记住用户信息**。
+官方默认跟随平台策略，mcode-mgr 提供手动控制：
+
+### 记忆开关（`memory set`）
+
+```bash
+mcode-mgr memory set true     # 开启持久记忆
+mcode-mgr memory set false    # 关闭持久记忆
+```
+
+- 写入 `~/.minimax/config.yaml` 的 `memory.enabled`
+- **下次会话启动生效**（runtime 只在会话开始时读取一次配置）
+- 关闭状态下跑 mcode 会话，`user.md` **不会被写入**（已验证）
+
+### 默认策略（`memory default`）
+
+```bash
+mcode-mgr memory default false   # 默认关闭（未显式配置时）
+mcode-mgr memory default true    # 默认开启
+```
+
+- 持久化到 `~/.minimax/mcode-mgr/memory-default.json`
+- 未在 config.yaml 显式配置时按此策略生效
+- 适合"平时默认关，需要时手动开"的隐私偏好
+
+### 按会话纳入记忆（`memory enroll`）
+
+把**指定会话的内容**提取并写入持久记忆文件，让 agent 跨会话记住关键信息：
+
+```bash
+# 写入 agent 记忆（~/.minimax/agents/mavis/memory/MEMORY.md）
+mcode-mgr memory enroll mvs_xxx
+
+# 写入 user profile（~/.minimax/memory/user.md，跨会话注入）
+mcode-mgr memory enroll mvs_xxx --scope user
+
+# 带备注
+mcode-mgr memory enroll mvs_xxx --scope user --note "项目背景"
+```
+
+- 自动过滤系统消息与工具调用，只保留有效对话内容
+- `--scope user` 写入 `user.md`（每次会话注入，优先级高）
+- `--scope agent` 写入 `MEMORY.md`（仅对应 agent 会话使用）
+- 显式 enroll 即使在记忆关闭状态下也会写入（显式指令优先）
+
+### 记忆文件位置
+
+| 文件 | 路径 | 作用 |
+|---|---|---|
+| User Profile | `~/.minimax/memory/user.md` | 跨会话注入的用户画像 |
+| Agent Memory | `~/.minimax/agents/mavis/memory/MEMORY.md` | mavis agent 的会话记忆 |
+| 开关配置 | `~/.minimax/config.yaml` (`memory.enabled`) | 持久记忆总开关 |
+| 默认策略 | `~/.minimax/mcode-mgr/memory-default.json` | 未显式配置时的默认值 |
+
 ## 目录结构
 
 ```
