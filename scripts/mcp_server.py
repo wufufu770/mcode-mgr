@@ -36,7 +36,7 @@ from pathlib import Path
 yaml = None
 
 SERVER_NAME = "mcode-mgr"
-SERVER_VERSION = "0.2.0"
+SERVER_VERSION = "0.3.0"
 PROTOCOL_VERSION = "2025-03-26"
 SUPPORTED_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"]
 

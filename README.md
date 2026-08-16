@@ -289,7 +289,7 @@ mcode-mgr 以 **agent-plugins.org 标准**打包为 MCP + Skill 双形态插件�
 
 | 文件 | 说明 |
 |---|---|
-| `plugin.json` | agent-plugins.org plugin.schema.json（name=mcode-mgr, version=0.2.0, author=wufufu770, license=MIT） |
+| `plugin.json` | agent-plugins.org plugin.schema.json（name=mcode-mgr, version=0.3.0, author=wufufu770, license=MIT） |
 | `mcp.json` | agent-plugins.org mcp.schema.json；stdio: `python3 scripts/mcp_server.py`（cwd=./） |
 | `skills/mcode-mgr/SKILL.md` | 技能（触发词含"会话/持久记忆"） |
 | `scripts/mcp_server.py` | self-contained 副本（sha256 与主仓库一致） |
@@ -307,7 +307,7 @@ mcode plugin list -m local --available
 - 注册表 PR：`hetaoBackend/MiniMax-Code-Plugins` → `plugins/wufufu770/mcode-mgr/`
   （fork 分支 `add/mcode-mgr-plugin`；`npm run check` 全绿）
 - 插件加载机制、格式约束与实测结论见 docs/notes/plugin-loading.md
-- 插件内 `mcp_server.py` 为 self-contained 副本，**与主仓库 v0.2.0 对齐，
+- 插件内 `mcp_server.py` 为 self-contained 副本，**与主仓库 v0.3.0 对齐，
   升级时同步**
 
 ## 兼容性
