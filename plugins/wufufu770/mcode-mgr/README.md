@@ -40,7 +40,7 @@ plugins/wufufu770/mcode-mgr/
 
 ## 版本对齐说明
 
-> **此副本与主仓库 v0.2.0 对齐，升级时同步。**
+> **此副本与主仓库 v0.3.0 对齐，升级时同步。**
 > `scripts/mcp_server.py` 是主仓库 `scripts/mcp_server.py` 的 self-contained 副本
 > （sha256 一致），随主仓库版本升级时同步更新。完整用法文档见
 > [主仓库 README](https://github.com/wufufu770/mcode-mgr)。
