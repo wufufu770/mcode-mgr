@@ -16,12 +16,13 @@ metadata:
 
 `mcode-mgr` 已安装到 PATH（通常为 `~/.local/bin/mcode-mgr`）。若未找到，提示用户安装：
 ```bash
-# 方式一：源码目录安装
+# 方式一：一键安装（源码目录）
+bash install.sh              # --prefix 默认 ~/.local；幂等，可重复执行
+
+# 方式二：手动安装（等价于 install.sh）
 cp bin/mcode-mgr ~/.local/bin/mcode-mgr
 cp scripts/mcp_server.py ~/.local/bin/mcp_server.py
 chmod +x ~/.local/bin/mcode-mgr
-
-# 方式二：单文件安装（需要 mcp_server.py 与 mcode-mgr 同目录）
 ```
 
 ## 会话管理
@@ -104,12 +105,15 @@ mcode-mgr memory block replace <sid|序号> <新内容> [--scope user|agent] [--
 
 - `memory show` 输出完整内容 + 元信息（路径/大小/修改时间/块数）；不存在时输出
   `（不存在: 路径）` exit 0
-- `memory edit` 需 `$EDITOR`；内容未变不写入；`## ` 块数变化视为结构破坏拒绝写入；
-  写前自动备份（`user.md.<epoch>` / `MEMORY.md.<epoch>` 轮转 5 份）
+- `memory edit` 需 `$EDITOR`；内容未变不写入；`## ` 块数变化或编辑后为空视为结构
+  破坏拒绝写入；缺 `> 来源` 引用行的块输出 WARN（含行号，不阻断）；文件尾部自动
+  补换行；写前自动备份（`user.md.<epoch>` / `MEMORY.md.<epoch>` 轮转 5 份）
 - `memory append` 追加「手动追加」块（含时间戳与备注），无 sid 不参与去重，
   受 512KB 上限约束
 - `memory block remove/replace` 按 sid 或序号精准操作；replace 保留标题与来源行；
   空内容等同删除；`--dry-run` 不写盘
+- 写操作（rename/archive/delete/fork/import）前检测 mcode 运行状态：活跃时结果
+  文本带 `⚠ mcode 正在运行，修改会话索引可能不同步` 警告行（不阻断操作）
 
 ## 持久记忆控制
 
