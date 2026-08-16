@@ -1,7 +1,7 @@
 # mcode-mgr — MiniMax Code 会话与持久记忆管理插件
 
-为 [MiniMax Code CLI](https://www.minimaxi.com)（mcode）提供会话管理与持久记忆控制，
-以 MCP + Skill 双形态打包为 agent-plugins.org 标准插件。
+MiniMax Code CLI（mcode）的会话管理与持久记忆控制插件，提供 MCP 工具与 Skill 技能，
+符合 agent-plugins.org 标准。
 
 ## 能力
 

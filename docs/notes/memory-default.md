@@ -1,13 +1,13 @@
-# memory-default.md — memory-default.json 与 mcode 默认读取优先级实证
+# memory-default.md — memory-default.json 与 mcode 默认读取优先级实测记录
 
-> 实证日期：2026-08-16 · mcode CLI 版本：0.1.2 · 证据来源：本机
+^> 记录日期：2026-08-16 · mcode CLI 版本：0.1.2 · 证据来源：本机
 > `/home/wff/.minimax-code/lib/node_modules/@minimax-ai/code/cli.js`
 
 ## 一、问题
 
 `mcode-mgr memory default false` 会写入 `~/.minimax/mcode-mgr/memory-default.json`
 并同步 config.yaml。v0.2 README 声称该文件"未在 config.yaml 显式配置时按此策略生效"。
-本实证检验：**config.yaml 未配置 `memory.enabled` 时，mcode 读取顺序到底是谁？**
+本次实测检验：**config.yaml 未配置 `memory.enabled` 时，mcode 读取顺序到底是谁？**
 
 ## 二、cli.js 取证（mcode 读取逻辑）
 
@@ -66,5 +66,5 @@ mcode 读取顺序 = config.yaml 的 memory.enabled（布尔）→ 否则内建�
 ### 附：memory status 展示值说明
 
 `memory_status()` 中 `default_policy` 来自 `_read_default_policy()`
-（memory-default.json），标注为"mcode-mgr 默认策略文件"——展示语义已按本实证
+（memory-default.json），标注为"mcode-mgr 默认策略文件"——展示语义已按本次实测
 在校验清单 T-05 修正 README。

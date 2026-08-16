@@ -3,8 +3,8 @@
 """MCode Manager CLI - 独立命令行入口。
 
 与 MCP 服务器共享同一份核心实现，通过命令行参数直接调用，
-不依赖 mcode 插件系统。安装方式与 mcode-theme 一致：
-复制到 ~/.local/bin/mcode-mgr 即可独立使用。
+不依赖 mcode 插件系统。安装时复制到 ~/.local/bin/mcode-mgr
+（与 scripts/mcp_server.py 同目录）即可独立使用。
 
 用法:
   mcode-mgr session list [--agent X] [--workspace Y] [--show-archived]

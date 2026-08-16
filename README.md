@@ -104,7 +104,7 @@ mcode-mgr agent list
 
 ## 插件与官方注册表
 
-`plugins/wufufu770/mcode-mgr/` 为 agent-plugins.org 标准插件包（MCP + Skill 双形态），
+`plugins/wufufu770/mcode-mgr/` 为 agent-plugins.org 标准插件包（MCP 工具 + Skill 技能），
 本地安装即"放目录"：
 
 ```bash

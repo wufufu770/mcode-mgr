@@ -1,6 +1,6 @@
 # plugin-loading.md — mcode 插件机制实测（E1）
 
-> 实证日期：2026-08-16 · mcode CLI 版本：0.1.2
+^> 记录日期：2026-08-16 · mcode CLI 版本：0.1.2
 > 环境：Linux x86_64，`mcode` 位于 `~/.minimax-code/bin/mcode`
 > （符号链接 → `~/.minimax-code/lib/node_modules/@minimax-ai/code/cli.js`）
 
@@ -46,7 +46,7 @@ local	directory	/home/wff/.minimax/plugins
 
 ```bash
 mkdir -p ~/.minimax/plugins/mcode-mgr
-# 放入 plugin.json + skills/ + mcp.json + scripts/（本次注册表包的六件套）
+# 放入 plugin.json + skills/ + mcp.json + scripts/（本次注册表包的文件）
 mcode plugin list -m local --available --json   # 应能看到该插件
 ```
 

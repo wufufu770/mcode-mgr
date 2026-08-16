@@ -1,6 +1,6 @@
-# memory-injection.md — enroll 格式与 mcode 注入解析兼容性实证
+# memory-injection.md — enroll 格式与 mcode 注入解析兼容性实测记录
 
-> 实证日期：2026-08-16 · mcode CLI 版本：0.1.2 · 证据来源：本机
+^> 记录日期：2026-08-16 · mcode CLI 版本：0.1.2 · 证据来源：本机
 > `/home/wff/.minimax-code/lib/node_modules/@minimax-ai/code/cli.js`
 > （23MB 压缩产物，以下均为该文件内取证的行号函数引用，另附本机实测）
 

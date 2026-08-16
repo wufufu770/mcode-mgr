@@ -17,7 +17,7 @@ matching the MCP SDK embedded in mcode's cli.js.
   6) trash tools         —— 回收站（list/restore/purge）
   7) memory tools        —— 持久记忆控制（status/set/default/enroll/show/edit/append/block）
   8) agent tools         —— agent list
-  9) robustness guards   —— mcode 活跃检测（F-01）与记忆结构守卫（F-02）
+  9) 运行检测与结构校验 —— mcode 活跃检测（F-01）与记忆结构守卫（F-02）
   10) tool registry      —— 工具清单与 handler 映射
   11) dispatch / CLI     —— MCP stdio 主循环与命令行入口
 """
@@ -447,7 +447,7 @@ def _tool_def(name, description, properties, required=None):
     }
 
 
-# -------------------------------------------------------- robustness guards (F-01/F-02)
+# ------------------------------------------------- 运行检测与结构校验 (F-01/F-02)
 
 _MCODE_WARN_LINE = "⚠ mcode 正在运行，修改会话索引可能不同步（建议先退出 mcode）"
 
