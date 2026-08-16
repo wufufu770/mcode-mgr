@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "mcode-mgr",
   "displayName": "MCode Manager",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "会话管理工具集：列出/查看/重命名/归档/删除/导出/导入/fork sessions，以及持久记忆开关与按会话纳入记忆。",
   "author": "wff",
   "icon": "icon.png",
