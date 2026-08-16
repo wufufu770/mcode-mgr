@@ -1,7 +1,6 @@
 # mcode-mgr — mcode 会话与持久记忆管理工具
 
-独立 CLI 工具，为 [MiniMax Code CLI](https://www.minimaxi.com)（mcode）提供会话管理与持久记忆控制。
-**不依赖 mcode 插件系统**，与 mcode-theme 相同的独立安装方式，mcode 升级不影响使用。
+MiniMax Code CLI（mcode）的会话管理与持久记忆控制工具，独立安装，不依赖 mcode 插件系统。
 
 ## 快速场景
 
