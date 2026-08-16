@@ -11,6 +11,17 @@ cp scripts/mcp_server.py ~/.local/bin/mcp_server.py
 chmod +x ~/.local/bin/mcode-mgr
 ```
 
+## 安装 Skill（让 mcode 对话中可用）
+
+mcode 的 skill 从 `~/.minimax/skills/<name>/SKILL.md` 加载（不是插件目录）。
+把 mcode-mgr 的 skill 放进去后，在 mcode 对话里直接说"列出会话 / 关闭持久记忆"
+等即可触发：
+
+```bash
+mkdir -p ~/.minimax/skills/mcode-mgr
+cp skills/mcode-mgr/SKILL.md ~/.minimax/skills/mcode-mgr/SKILL.md
+```
+
 ## 使用
 
 ### 会话管理
