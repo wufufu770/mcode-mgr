@@ -1,0 +1,19 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "mcode-mgr",
+  "version": "0.2.0",
+  "description": "MiniMax Code CLI (mcode) 会话管理与持久记忆控制：列出/查看/重命名/归档/删除/导出/导入/fork 会话，回收站恢复，持久记忆开关与按会话纳入记忆（enroll/show/edit/append/block），agent 列表。",
+  "author": {
+    "name": "wufufu770",
+    "url": "https://github.com/wufufu770"
+  },
+  "homepage": "https://github.com/wufufu770/mcode-mgr",
+  "repository": "https://github.com/wufufu770/mcode-mgr",
+  "license": "MIT",
+  "keywords": [
+    "minimax-code",
+    "session",
+    "memory",
+    "mcp"
+  ]
+}
