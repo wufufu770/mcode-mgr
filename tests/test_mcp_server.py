@@ -887,5 +887,160 @@ class TestV2Feedback(unittest.TestCase):
         self.assertTrue(payload["ok"])
 
 
+# =================================================================== v0.3 用例
+# F-01 mcode 活跃检测 / F-02 memory edit 结构守卫
+
+try:
+    from unittest import mock
+except ImportError:  # pragma: no cover - 3.3+ 必有
+    mock = None
+
+
+class _FakePgrepProc:
+    """模拟 subprocess.run 的返回值（pgrep 输出）。"""
+
+    def __init__(self, stdout, returncode):
+        self.stdout = stdout
+        self.returncode = returncode
+
+
+class TestF01McodeRunning(unittest.TestCase):
+    """T-01: _mcode_running() 活跃/不活跃两态可测（monkeypatch）"""
+
+    def test_f01_active_state(self):
+        with mock.patch.object(mcp.subprocess, "run",
+                               return_value=_FakePgrepProc("12345\n", 0)):
+            self.assertTrue(mcp._mcode_running())
+
+    def test_f01_inactive_state(self):
+        with mock.patch.object(mcp.subprocess, "run",
+                               return_value=_FakePgrepProc("", 1)):
+            self.assertFalse(mcp._mcode_running())
+
+    def test_f01_pgrep_unavailable_false(self):
+        with mock.patch.object(mcp.subprocess, "run", side_effect=OSError("no pgrep")):
+            self.assertFalse(mcp._mcode_running())
+
+    def test_f01_self_pid_excluded(self):
+        with mock.patch.object(mcp.subprocess, "run",
+                               return_value=_FakePgrepProc(f"{os.getpid()}\n99999\n", 0)):
+            self.assertTrue(mcp._mcode_running())  # 99999 保留 → 仍判定活跃
+
+
+class TestF01WriteWarning(unittest.TestCase):
+    """T-02: rename/archive/delete 在模拟 mcode 活跃时输出 ⚠ 警告行且操作仍执行"""
+
+    def setUp(self):
+        self.sid = _new_sid()
+        _make_session(self.sid)
+
+    def test_f01_rename_warns_but_executes(self):
+        mcp._mcode_running = lambda: True
+        try:
+            r = mcp.tool_session_rename({"session_id": self.sid, "title": "新标题"})
+            self.assertFalse(r["isError"])
+            out = _text_of(r)
+            self.assertIn("⚠ 检测到 mcode 运行中", out)
+            self.assertIn("⚠ mcode 正在运行", out)
+            self.assertIn("已重命名", out)
+            self.assertEqual(mcp._get_session(self.sid)["title"], "新标题")
+        finally:
+            mcp._mcode_running = _orig_mcode_running
+
+    def test_f01_archive_warns_but_executes(self):
+        mcp._mcode_running = lambda: True
+        try:
+            r = mcp.tool_session_archive({"session_id": self.sid})
+            self.assertFalse(r["isError"])
+            self.assertIn("⚠ mcode 正在运行", _text_of(r))
+            self.assertTrue(mcp._get_session(self.sid)["archived"])
+        finally:
+            mcp._mcode_running = _orig_mcode_running
+
+    def test_f01_delete_warns_but_executes(self):
+        mcp._mcode_running = lambda: True
+        try:
+            r = mcp.tool_session_delete({"session_id": self.sid})
+            self.assertFalse(r["isError"])
+            out = _text_of(r)
+            self.assertIn("⚠ mcode 正在运行", out)
+            self.assertIn("已删除会话", out)
+            self.assertIsNone(mcp._get_session(self.sid))
+        finally:
+            mcp._mcode_running = _orig_mcode_running
+
+    def test_f01_not_running_no_warning(self):
+        mcp._mcode_running = lambda: False
+        try:
+            r = mcp.tool_session_rename({"session_id": self.sid, "title": "无警告"})
+            self.assertFalse(r["isError"])
+            self.assertNotIn("⚠", _text_of(r))
+            self.assertIn("已重命名", _text_of(r))
+        finally:
+            mcp._mcode_running = _orig_mcode_running
+
+
+class TestF02MemoryEditGuard(unittest.TestCase):
+    """T-03: memory edit 结构守卫：缺引用行块 → WARN 且写入（WARN 含行号）"""
+
+    def setUp(self):
+        self.sid = _new_sid()
+        _make_session(self.sid)
+        mcp.USER_MD.parent.mkdir(parents=True, exist_ok=True)
+        _enroll(self.sid, scope="user")
+
+    def tearDown(self):
+        if mcp.USER_MD.exists():
+            mcp.USER_MD.unlink()
+        if mcp.BACKUPS_DIR.exists():
+            shutil.rmtree(str(mcp.BACKUPS_DIR))
+
+    def test_f02_edit_missing_ref_warns_and_writes(self):
+        original = mcp.USER_MD.read_text(encoding="utf-8")
+        # 删掉已有块的引用行（块数不变），并改一处正文
+        new = original.replace("> 来源 session:", "> 手动记录:").replace("好的，收到。", "好的，收到。")
+        self.assertNotEqual(new, original)
+        _set_editor(new)
+        r = mcp.tool_memory_edit({"scope": "user"})
+        self.assertFalse(r["isError"])
+        out = _text_of(r)
+        self.assertIn("⚠ 块 #", out)
+        self.assertIn("缺少 `> 来源` 引用行", out)
+        self.assertIn("行 ", out)
+        self.assertIn("已写入", out)
+        written = mcp.USER_MD.read_text(encoding="utf-8")
+        self.assertEqual(written, new)
+        self.assertTrue(written.endswith("\n"))
+
+    def test_f02_edit_empty_rejected(self):
+        _set_editor("")
+        r = mcp.tool_memory_edit({"scope": "user"})
+        self.assertTrue(r["isError"])
+        self.assertIn("为空", _text_of(r))
+        self.assertIn("拒绝写入", _text_of(r))
+        self.assertNotEqual(mcp.USER_MD.read_text(encoding="utf-8"), "")
+
+    def test_f02_edit_trailing_newline_auto_fixed(self):
+        original = mcp.USER_MD.read_text(encoding="utf-8")
+        new = original.rstrip("\n")  # 去掉尾部换行
+        _set_editor(new)
+        r = mcp.tool_memory_edit({"scope": "user"})
+        self.assertFalse(r["isError"])
+        self.assertIn("尾部缺少换行", _text_of(r))
+        self.assertTrue(mcp.USER_MD.read_text(encoding="utf-8").endswith("\n"))
+
+    def test_f02_edit_heading_decrease_rejected(self):
+        original = mcp.USER_MD.read_text(encoding="utf-8")
+        broken = re.sub(r"^## 会话记忆:.*$", "# 降级标题", original, count=1, flags=re.M)
+        _set_editor(broken)
+        r = mcp.tool_memory_edit({"scope": "user"})
+        self.assertTrue(r["isError"])
+        self.assertIn("块结构被破坏", _text_of(r))
+        self.assertEqual(mcp.USER_MD.read_text(encoding="utf-8"), original)
+
+
+_orig_mcode_running = mcp._mcode_running
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

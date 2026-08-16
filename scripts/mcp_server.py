@@ -7,6 +7,19 @@ Provides session management and persistent-memory control tools for mcode
 
 Transport: JSON-RPC 2.0 over stdio, one JSON object per line (newline framed),
 matching the MCP SDK embedded in mcode's cli.js.
+
+功能域分区（按注释分隔线）：
+  1) 常量与路径约定      —— 数据目录 / 记忆文件 / mcode-mgr 状态目录（F-06 目录约定）
+  2) db helpers          —— sqlite 只读/读写连接与查询（读保持 readonly 打开）
+  3) config helpers      —— config.yaml 读写、写前备份轮转、memory-default 策略
+  4) mcp protocol        —— JSON-RPC 结果结构 / 工具定义 / dispatch
+  5) tool impls          —— 会话管理（list/get/rename/archive/delete/export/import/fork）
+  6) trash tools         —— 回收站（list/restore/purge）
+  7) memory tools        —— 持久记忆控制（status/set/default/enroll/show/edit/append/block）
+  8) agent tools         —— agent list
+  9) robustness guards   —— mcode 活跃检测（F-01）与记忆结构守卫（F-02）
+  10) tool registry      —— 工具清单与 handler 映射
+  11) dispatch / CLI     —— MCP stdio 主循环与命令行入口
 """
 
 import json
@@ -14,6 +27,7 @@ import os
 import re
 import shutil
 import sqlite3
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -433,6 +447,56 @@ def _tool_def(name, description, properties, required=None):
     }
 
 
+# -------------------------------------------------------- robustness guards (F-01/F-02)
+
+_MCODE_WARN_LINE = "⚠ mcode 正在运行，修改会话索引可能不同步（建议先退出 mcode）"
+
+
+def _mcode_running() -> bool:
+    """检测 mcode 是否正在运行：pgrep -f 匹配 cli.js 路径或 mcode 进程名。
+
+    排除自身进程；pgrep 不可用 / 超时 / 出错一律视为"未检测到"（False）。
+    可被测试 monkeypatch（见 tests/test_mcp_server.py F-01 用例）。
+    """
+    me = os.getpid()
+    try:
+        out = subprocess.run(
+            ["pgrep", "-f", "mcode|cli\\.js"],
+            capture_output=True, text=True, timeout=5)
+    except Exception:
+        return False
+    if out.returncode not in (0, 1):
+        return False
+    pids = [p for p in out.stdout.split() if p.isdigit() and int(p) != me]
+    return bool(pids)
+
+
+def _mcode_running_warning() -> str:
+    """写操作前的 mcode 活跃检测：运行中返回警告块文本（含检测前缀），否则空串。"""
+    if _mcode_running():
+        return f"⚠ 检测到 mcode 运行中\n{_MCODE_WARN_LINE}\n\n"
+    return ""
+
+
+def _check_memory_structure(text: str) -> list:
+    """F-02 结构守卫：校验每个 `## ` 块是否含 `> 来源` 引用行（块边界配对）。
+
+    返回 WARN 行列表（不阻断写入，提示行号）；无问题返回空列表。
+    阻断性判定（标题数减少 / 文件为空）由调用方 tool_memory_edit 负责。
+    """
+    warns = []
+    lines = text.splitlines()
+    starts = [i for i, ln in enumerate(lines) if re.match(r"^## ", ln)]
+    for idx, start in enumerate(starts):
+        end = starts[idx + 1] if idx + 1 < len(starts) else len(lines)
+        has_ref = any("来源" in ln for ln in lines[start:end])
+        if not has_ref:
+            warns.append(
+                f"⚠ 块 #{idx + 1}（行 {start + 1}）缺少 `> 来源` 引用行，"
+                f"该块无法按来源定位，建议补上引用行")
+    return warns
+
+
 # ---------------------------------------------------------------- tool impls
 
 def tool_session_list(args):
@@ -523,6 +587,7 @@ def tool_session_rename(args):
         return _text("session_id 和 title 均为必填", is_error=True)
     if not _get_session(sid):
         return _text(f"会话不存在: {sid}", is_error=True)
+    warn = _mcode_running_warning()
     conn = _db()
     try:
         conn.execute("UPDATE local_runtime_sessions SET title=?, updated_at_ms=? WHERE session_id=?",
@@ -538,7 +603,7 @@ def tool_session_rename(args):
             (d / "manifest.json").write_text(json.dumps(mf, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception:
             pass
-    return _text(f"已重命名 `{sid}` → {new_title}")
+    return _text(warn + f"已重命名 `{sid}` → {new_title}")
 
 
 def tool_session_archive(args):
@@ -549,6 +614,7 @@ def tool_session_archive(args):
     s = _get_session(sid)
     if not s:
         return _text(f"会话不存在: {sid}", is_error=True)
+    warn = _mcode_running_warning()
     ARCHIVES_DIR.mkdir(parents=True, exist_ok=True)  # 预留目录（本次不移动会话目录）
     conn = _db()
     try:
@@ -558,7 +624,7 @@ def tool_session_archive(args):
     finally:
         conn.close()
     action = "已归档" if archive else "已取消归档"
-    return _text(f"{action}: `{sid}` {s['title']}")
+    return _text(warn + f"{action}: `{sid}` {s['title']}")
 
 
 def tool_session_delete(args):
@@ -570,6 +636,7 @@ def tool_session_delete(args):
         return _text(f"会话不存在: {sid}", is_error=True)
     if s["status"] == "active":
         return _text(f"会话正在运行中，不能删除: {sid}", is_error=True)
+    warn = _mcode_running_warning()
     conn = _db()
     try:
         failed = []
@@ -599,7 +666,7 @@ def tool_session_delete(args):
         except Exception as e:
             return _text(f"索引已删除，会话目录仍位于 {d}，可手工删除或恢复（移动失败: {e}）",
                          is_error=True)
-    return _text(f"已删除会话 `{sid}` {s['title']}")
+    return _text(warn + f"已删除会话 `{sid}` {s['title']}")
 
 
 def tool_session_export(args):
@@ -665,6 +732,7 @@ def tool_session_import(args):
             continue
     if not lines:
         return _text("文件中没有可解析的消息", is_error=True)
+    warn = _mcode_running_warning()
     sid = _gen_session_id()
     now = _now_ms()
     d = SESSIONS_ROOT / time.strftime("%Y/%m/%d", time.localtime(now / 1000)) / (
@@ -695,7 +763,7 @@ def tool_session_import(args):
     err = _insert_session_record(sid, workspace, title, now, lines, agent_name=agent_name)
     if err:
         return _text(f"导入失败: {err}", is_error=True)
-    return _text(f"→ 已导入 {len(lines)} 条 → `{sid}`（agent={agent_name}，{title}）\n→ {p}")
+    return _text(warn + f"→ 已导入 {len(lines)} 条 → `{sid}`（agent={agent_name}，{title}）\n→ {p}")
 
 
 def _insert_session_record(sid, workspace, title, now, msgs, agent_name=None):
@@ -792,6 +860,7 @@ def tool_session_fork(args):
     s = _get_session(sid)
     if not s:
         return _text(f"会话不存在: {sid}", is_error=True)
+    warn = _mcode_running_warning()
     msgs = _read_messages_jsonl(sid)
     new_sid = _gen_session_id()
     now = _now_ms()
@@ -821,7 +890,7 @@ def tool_session_fork(args):
     err = _insert_session_record(new_sid, s["workspace"], new_title, now, msgs)
     if err:
         return _text(f"fork 失败: {err}", is_error=True)
-    return _text(f"已 fork `{sid}` → `{new_sid}`（{new_title}，{len(msgs)} 条消息）")
+    return _text(warn + f"已 fork `{sid}` → `{new_sid}`（{new_title}，{len(msgs)} 条消息）")
 
 
 # ---------------------------------------------------------------- trash tools
@@ -1199,7 +1268,6 @@ def tool_memory_edit(args):
     try:
         tmp.write_text(original, encoding="utf-8")
         import shlex
-        import subprocess
         cmd = shlex.split(editor) + [str(tmp)]
         try:
             subprocess.run(cmd, check=False)
@@ -1209,10 +1277,19 @@ def tool_memory_edit(args):
         if edited == original:
             return _text("无变化，未写入")
         _backup_file(path, path.name)
+        if not edited.strip():
+            return _text("编辑后文件为空，拒绝写入（文件已备份）", is_error=True)
         if _count_blocks(edited) != _count_blocks(original):
             return _text("块结构被破坏，未写入（文件已备份）", is_error=True)
+        warnings = _check_memory_structure(edited)
+        if edited and not edited.endswith("\n"):
+            edited += "\n"
+            warnings.append("⚠ 文件尾部缺少换行，已自动补全")
         _atomic_write(path, edited)
-        return _text(f"已写入 {path.name}\n→ {path}")
+        msg = f"已写入 {path.name}\n→ {path}"
+        if warnings:
+            msg = "\n".join(warnings) + "\n\n" + msg
+        return _text(msg)
     finally:
         try:
             tmp.unlink()
