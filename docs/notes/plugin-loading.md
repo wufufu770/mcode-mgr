@@ -23,7 +23,7 @@ mcode plugin   Manage MiniMax Code Plugins
 
 ```
 official	registry
-local	directory	/home/wff/.minimax/plugins
+local	directory	~/.minimax/plugins
 ```
 
 没有 `plugin install` 子命令——官方市场用 `add`，本地插件即"放进目录"。

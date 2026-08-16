@@ -1,7 +1,7 @@
 # memory-default.md — memory-default.json 与 mcode 默认读取优先级实测记录
 
 ^> 记录日期：2026-08-16 · mcode CLI 版本：0.1.2 · 证据来源：本机
-> `/home/wff/.minimax-code/lib/node_modules/@minimax-ai/code/cli.js`
+> `~/.minimax-code/lib/node_modules/@minimax-ai/code/cli.js`
 
 ## 一、问题
 
